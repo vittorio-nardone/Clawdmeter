@@ -28,6 +28,14 @@ void display_hal_set_brightness(uint8_t level) {
     // gfx->setBrightness(level);
 }
 
+void display_hal_sleep(void) {
+    // gfx->displayOff();   // panel display-off command (cut pixel current)
+}
+
+void display_hal_wake(void) {
+    // gfx->displayOn();
+}
+
 void display_hal_fill_screen(uint16_t color) {
     (void)color;
     // gfx->fillScreen(color);

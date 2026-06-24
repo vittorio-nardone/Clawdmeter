@@ -24,6 +24,10 @@ static void apply_brightness(uint8_t b) {
 }
 
 static void begin_fade(uint8_t to, uint32_t now) {
+    // Waking (to != 0): bring the panel output back BEFORE ramping brightness,
+    // so the fade-in is visible. Covers every wake entry point that routes
+    // through begin_fade. displayOn while already on is harmless.
+    if (to != 0) display_hal_wake();
     fade_from = (to == 0) ? awake_brightness : 0;
     fade_to   = to;
     fade_started_ms = now;
@@ -104,7 +108,14 @@ void idle_tick(void) {
         uint32_t elapsed = now - fade_started_ms;
         if (elapsed >= dur) {
             apply_brightness(fade_to);
-            state = (state == STATE_FADING_OUT) ? STATE_ASLEEP : STATE_AWAKE;
+            if (state == STATE_FADING_OUT) {
+                state = STATE_ASLEEP;
+                // Panel fully dark — issue display-off to cut pixel current
+                // (brightness 0 alone leaves the panel output enabled).
+                display_hal_sleep();
+            } else {
+                state = STATE_AWAKE;
+            }
         } else {
             // Linear interpolation fade_from -> fade_to over dur ms.
             int32_t span = (int32_t)fade_to - (int32_t)fade_from;
