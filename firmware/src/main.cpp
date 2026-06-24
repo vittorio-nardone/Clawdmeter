@@ -184,6 +184,13 @@ void setup() {
     delay(300);
     Serial.println("{\"ready\":true}");
 
+    // Drop the CPU from the default 240 MHz to 80 MHz. The workload (LVGL on a
+    // partial-render strip + a 60s BLE poll) is far from CPU-bound, and the
+    // core is awake 24/7 (no light-sleep on this Arduino core — see power
+    // notes), so the always-on baseline current dominates battery life.
+    // 80 MHz keeps BLE stable and the UI responsive while cutting that baseline.
+    setCpuFrequencyMhz(80);
+
     board_init();
 
     display_hal_init();

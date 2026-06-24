@@ -17,6 +17,14 @@ void display_hal_begin(void);
 void display_hal_set_brightness(uint8_t level);  // 0..255 (driver-defined scale)
 void display_hal_fill_screen(uint16_t color565);
 
+// Power down / wake the panel output. sleep() issues the panel's display-off
+// command (cuts AMOLED pixel current; controller stays alive); wake() restores
+// output. Used by the idle screen-off path so a dark panel actually saves
+// power rather than just sitting at brightness 0. GRAM is retained, so wake()
+// shows whatever was last drawn. No-op on boards without a driver.
+void display_hal_sleep(void);
+void display_hal_wake(void);
+
 // Write a w×h RGB565 bitmap at (x, y). Boards with software rotation
 // (e.g. CO5300) transform (x, y, w, h) and the pixel buffer here before
 // pushing to the panel. Shared LVGL flush_cb just calls this — no #ifdef.
