@@ -399,25 +399,17 @@ async def poll_api(token: str) -> dict | None:
 def _billing_period_info(now: float, reset_ts: str) -> dict:
     """Fraction of billing period elapsed (tp, 0-100) and period length in days (pd).
 
-    Billing periods are assumed calendar-monthly: period_end is the reset
-    timestamp, period_start is the same day/time one calendar month earlier.
-
-    The rate-limit headers expose only the reset timestamp, not the period
-    length, so the monthly window is an assumption — but a documented one:
-    Enterprise spend-limit `period` "the only value today is monthly"
-    (Claude Enterprise Admin API reference). The doc notes period is an open
-    string that may gain other values later; revisit this if so.
+    Enterprise billing is monthly, resetting on the 1st of each calendar month.
+    The overage-reset header is a short rate-limit window (minutes), not the
+    monthly cycle, so we derive the period from the calendar instead.
     """
-    try:
-        period_end = float(reset_ts)
-    except ValueError:
-        return {"tp": 0, "pd": 30}
-    dt_end = datetime.datetime.fromtimestamp(period_end)
-    prev_month = dt_end.month - 1 or 12
-    prev_year = dt_end.year if dt_end.month > 1 else dt_end.year - 1
-    prev_day = min(dt_end.day, calendar.monthrange(prev_year, prev_month)[1])
-    dt_start = dt_end.replace(year=prev_year, month=prev_month, day=prev_day)
+    dt_now = datetime.datetime.fromtimestamp(now)
+    dt_start = dt_now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    nm = dt_start.month % 12 + 1
+    ny = dt_start.year + (1 if dt_start.month == 12 else 0)
+    dt_end = dt_start.replace(year=ny, month=nm)
     period_start = dt_start.timestamp()
+    period_end = dt_end.timestamp()
     period_len = period_end - period_start
     if period_len <= 0:
         return {"tp": 0, "pd": 30}

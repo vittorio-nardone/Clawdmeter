@@ -284,15 +284,15 @@ poll() {
         overage_util=${overage_util:-0}; overage_reset=${overage_reset:-0}
         # Compute period info via python3 (awk lacks date arithmetic)
         local period_info
-        period_info=$(python3 - "$now" "$overage_reset" <<'PYEOF'
-import sys, datetime, calendar, json
-now, reset_ts = float(sys.argv[1]), float(sys.argv[2])
-dt_end = datetime.datetime.fromtimestamp(reset_ts)
-pm = dt_end.month - 1 or 12
-py = dt_end.year if dt_end.month > 1 else dt_end.year - 1
-pd = min(dt_end.day, calendar.monthrange(py, pm)[1])
-dt_start = dt_end.replace(year=py, month=pm, day=pd)
-period_len = reset_ts - dt_start.timestamp()
+        period_info=$(python3 - "$now" <<'PYEOF'
+import sys, datetime, json
+now = float(sys.argv[1])
+dt_now = datetime.datetime.fromtimestamp(now)
+dt_start = dt_now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+nm = dt_start.month % 12 + 1
+ny = dt_start.year + (1 if dt_start.month == 12 else 0)
+dt_end = dt_start.replace(year=ny, month=nm)
+period_len = dt_end.timestamp() - dt_start.timestamp()
 tp = max(0, min(100, int(round((now - dt_start.timestamp()) / period_len * 100)))) if period_len > 0 else 0
 pd_days = int(round(period_len / 86400))
 rd = f"{dt_end.strftime('%b')} {dt_end.day}"
